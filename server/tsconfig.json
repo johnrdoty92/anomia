@@ -1,0 +1,22 @@
+{
+  "ts-node": {
+    "require": ["tsconfig-paths/register"],
+    "esm": true,
+    "files": true
+  },
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "moduleResolution": "Node",
+    "baseUrl": "./src",
+    "resolveJsonModule": true,
+    "removeComments": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true
+  }
+}
