@@ -1,0 +1,27 @@
+{
+  "name": "anomia-server",
+  "version": "0.0.0",
+  "description": "Backend web-socket server",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx watch --inspect src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnrdoty92/anomia.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johnrdoty92/anomia/issues"
+  },
+  "homepage": "https://github.com/johnrdoty92/anomia#readme",
+  "dependencies": {
+    "anomia-shared": "file:../shared"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "prettier": "^3.3.2",
+    "tsx": "^4.15.5"
+  }
+}

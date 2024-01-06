@@ -1,0 +1,14 @@
+{
+  "name": "anomia",
+  "description": "Web app version of Anomia card game",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnrdoty92/anomia.git"
+  },
+  "author": "John Doty",
+  "workspaces": [
+    "server",
+    "client",
+    "shared"
+  ]
+}

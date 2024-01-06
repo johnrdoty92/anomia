@@ -1,0 +1,23 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: development
+    ports:
+      - 3000:3000
+      - 9229:9229
+    volumes:
+      - ./server/src:/usr/app/src:ro
+      - ./types:/usr/types:ro
+  client:
+    build:
+      context: ./client
+      dockerfile: ./Dockerfile
+    ports:
+      - 5137:5137
+    volumes:
+      - ./client/src:/usr/app/src:ro
+      - ./types:/usr/types:ro
+
