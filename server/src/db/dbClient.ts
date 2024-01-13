@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { CreatePlayerArgs } from "anomia-types";
+import { generateGameSessionId } from "util/random";
 
 class DbClient {
   private static db: PrismaClient;
@@ -7,16 +9,10 @@ class DbClient {
       DbClient.db = new PrismaClient();
     }
   }
-  // TODO: define types for player/game creation
-  async createGame({
-    playerName,
-    playerId,
-  }: {
-    playerName: string;
-    playerId: string;
-  }): Promise<{ gameId: string; playerId: string }> {
+  async createGame({ playerName, playerId }: CreatePlayerArgs): Promise<{ gameId: string; playerId: string }> {
     const { id } = await DbClient.db.game.create({
       data: {
+        id: generateGameSessionId(),
         players: {
           create: { name: playerName, id: playerId },
         },
@@ -33,12 +29,26 @@ class DbClient {
     });
     return game?.id;
   }
-  async addPlayer(gameId: string, { name, id }: { name: string; id: string }) {
-    const player = await DbClient.db.player.create({ data: { name, id, Game: { connect: { id: gameId } } } });
-    return player;
+  async addPlayer(gameId: string, playerData: CreatePlayerArgs) {
+    const { playerId, playerName } = playerData;
+    try {
+      const player = await DbClient.db.player.create({
+        data: { name: playerName, id: playerId, Game: { connect: { id: gameId } } },
+      });
+      return player;
+    } catch (error) {
+      console.error(error);
+      return new Error(`Cannot join game ${gameId}. Does not exist.`);
+    }
   }
   // deleteGame (throws if not exists)
   // getPlayer
+  async clearData() {
+    if (process.env.NODE_ENV !== "development") return;
+    const deletePlayers = DbClient.db.player.deleteMany();
+    const deleteGames = DbClient.db.game.deleteMany();
+    await DbClient.db.$transaction([deletePlayers, deleteGames]);
+  }
 }
 
 const db = new DbClient();

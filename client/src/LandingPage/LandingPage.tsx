@@ -1,5 +1,11 @@
 import { ConnectButton } from "./components/ConnectButton";
+import { Players } from "./components/Players";
 
 export const LandingPage = () => {
-  return <ConnectButton />;
+  return (
+    <>
+      <Players />
+      <ConnectButton />
+    </>
+  );
 };

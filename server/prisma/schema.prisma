@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Game {
-  id         String   @id @unique @default(uuid())
+  id         String   @id @unique
   players    Player[]
   inProgress Boolean  @default(false)
 }

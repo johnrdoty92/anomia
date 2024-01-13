@@ -3,7 +3,7 @@ import { createServer } from "http";
 import express from "express";
 import { Server, Socket } from "socket.io";
 import { handleJoinGameRequest, handleNewGameRequest } from "socketListeners";
-import { CLIENT_REQUESTS } from "./events";
+import { CLIENT_REQUESTS } from "anomia-types";
 import { db } from "db/dbClient";
 
 const app = express();

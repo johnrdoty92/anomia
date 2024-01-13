@@ -1,5 +1,6 @@
 export const SERVER_EMITTED_EVENTS = {
   newPlayer: "newPlayer",
+  gameId: "gameId",
   nextTurn: "nextTurn",
   faceOff: "faceOff",
   gameStart: "gameStart",

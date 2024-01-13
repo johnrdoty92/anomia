@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
+    "anomia-types": "file:../shared",
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
   }
