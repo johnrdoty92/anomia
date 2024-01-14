@@ -41,8 +41,11 @@ class DbClient {
       return new Error(`Cannot join game ${gameId}. Does not exist.`);
     }
   }
-  // deleteGame (throws if not exists)
-  // getPlayer
+  // TODO:
+  // update player's cards
+  // get player's cards (for syncing if disconnected)
+  // delete game
+  // update current player?
   async clearData() {
     if (process.env.NODE_ENV !== "development") return;
     const deletePlayers = DbClient.db.player.deleteMany();

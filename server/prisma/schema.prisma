@@ -11,6 +11,7 @@ model Game {
   id         String   @id @unique
   players    Player[]
   inProgress Boolean  @default(false)
+  // TODO: add something to keep track of players' turn
 }
 
 model Player {

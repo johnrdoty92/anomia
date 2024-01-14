@@ -1,4 +1,8 @@
-export const SERVER_EMITTED_EVENTS = {
+import { EventsMap } from "./types";
+
+type ServerEmittedEvents = {[Key in keyof EventsMap]: Key}
+
+export const SERVER_EMITTED_EVENTS: ServerEmittedEvents = {
   newPlayer: "newPlayer",
   gameId: "gameId",
   nextTurn: "nextTurn",
