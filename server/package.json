@@ -4,7 +4,8 @@
   "description": "Backend web-socket server",
   "main": "src/index.ts",
   "scripts": {
-    "start": "tsx watch --inspect src/index.ts"
+    "start": "tsx watch --inspect src/index.ts",
+    "test": "vitest"
   },
   "author": "",
   "license": "ISC",

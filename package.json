@@ -6,9 +6,15 @@
     "url": "git+https://github.com/johnrdoty92/anomia.git"
   },
   "author": "John Doty",
+  "scripts": {
+    "test": "vitest"
+  },
   "workspaces": [
     "server",
     "client",
     "shared"
-  ]
+  ],
+  "devDependencies": {
+    "vitest": "^2.0.5"
+  }
 }

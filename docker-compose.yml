@@ -2,22 +2,19 @@ services:
   server:
     build:
       context: ./server
-      dockerfile: ./Dockerfile
-    environment:
-      NODE_ENV: development
+      target: dev
     ports:
       - 3000:3000
       - 9229:9229
     volumes:
-      - ./server/src:/usr/app/src:ro
-      - ./types:/usr/types:ro
-  client:
-    build:
-      context: ./client
-      dockerfile: ./Dockerfile
-    ports:
-      - 5137:5137
+      - ./server/src:/app/src
+      - ./shared:/app/shared
+  tests:
+    build: 
+      context: . 
     volumes:
-      - ./client/src:/usr/app/src:ro
-      - ./types:/usr/types:ro
+      - ./server:/app/server
+      - ./client:/app/client
+      - ./vitest.workspace.ts:/app/vitest.workspace.ts
+    tty: true
 
