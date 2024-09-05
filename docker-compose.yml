@@ -9,6 +9,7 @@ services:
     volumes:
       - ./server/src:/app/src
       - ./shared:/app/shared
+      - ./server/src/prisma:/app/src/prisma
   tests:
     build: 
       context: . 

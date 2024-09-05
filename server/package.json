@@ -18,11 +18,14 @@
   },
   "homepage": "https://github.com/johnrdoty92/anomia#readme",
   "dependencies": {
+    "@prisma/client": "^5.19.1",
     "anomia-shared": "file:../shared"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
     "prettier": "^3.3.2",
-    "tsx": "^4.15.5"
+    "prisma": "^5.19.1",
+    "tsx": "^4.15.5",
+    "typescript": "^5.5.4"
   }
 }

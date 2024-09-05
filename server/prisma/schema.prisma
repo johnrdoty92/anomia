@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Game {
+  id               String   @unique
+  currentCardIndex Int
+  players          Player[]
+  deckShuffleSeed  Int
+  deckId           String
+}
+
+model Player {
+  id          String        @unique @default(uuid())
+  index       Int
+  name        String
+  game        Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameId      String
+  ClaimedCard ClaimedCard[]
+
+  @@unique([gameId, index])
+}
+
+model ClaimedCard {
+  id        String @unique @default(uuid())
+  cardIndex Int
+  player    Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId  String
+}
+
+model Card {
+  id     String  @unique @default(uuid())
+  // Shapes are int enums
+  shape1 Int 
+  shape2 Int? // For wild cards
+  deckId String // For multiple decks, when supported
+  topic  String
+}
