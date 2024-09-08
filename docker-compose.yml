@@ -3,16 +3,20 @@ services:
     build:
       context: ./server
       target: dev
+      args:
+        - DATABASE_URL=${DATABASE_URL}
     ports:
       - 3000:3000
       - 9229:9229
     volumes:
       - ./server/src:/app/src
-      - ./shared:/app/shared
       - ./server/src/prisma:/app/src/prisma
+      - ./shared:/app/shared
   tests:
     build: 
-      context: . 
+      context: .
+      args:
+        - DATABASE_URL=${DATABASE_URL}
     volumes:
       - ./server:/app/server
       - ./client:/app/client

@@ -17,6 +17,9 @@
     "url": "https://github.com/johnrdoty92/anomia/issues"
   },
   "homepage": "https://github.com/johnrdoty92/anomia#readme",
+  "prisma": {
+    "seed": "tsx prisma/seeds/index.ts"
+  },
   "dependencies": {
     "@prisma/client": "^5.19.1",
     "anomia-shared": "file:../shared"
