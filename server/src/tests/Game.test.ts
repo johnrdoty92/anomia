@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Game } from "../controllers/Game";
 import { testDbClient } from "./setup";
 
-const mocks = vi.hoisted(() => ({ getGameId: vi.fn(() => "ABCDEF") }));
+const SEED = 1000;
+const FIRST_FACE_OFF_ROUND = 4;
 
-vi.mock("../util/randomId", () => ({ getGameId: mocks.getGameId }));
+const mocks = vi.hoisted(() => ({ getGameId: vi.fn(() => "ABCDEF"), getDeckSeed: vi.fn(() => SEED) }));
+
+vi.mock("../util/random", () => ({ ...mocks }));
 
 const createThreePlayerGame = async () => {
   const game = await Game.createGame({
@@ -51,16 +54,32 @@ describe("Game Class Tests", () => {
     expect(game.addPlayer({ name: "Charlie" })).rejects.toThrow("Cannot join game because it already started.");
   });
 
-  it("should draw a card if the game is active and it's the player's turn", async () => {
+  it("should draw a card if the game is active, it's the player's turn and there's no face off", async () => {
     const game = await createThreePlayerGame();
-    expect((await game.drawCard(0)).faceOff).toBe(undefined);
+    expect(game.isActive).toBe(true);
+    const firstRoundResults = await game.drawCard(0);
+    expect(firstRoundResults.faceOff).toBe(undefined);
+    for (let i = 1; i < FIRST_FACE_OFF_ROUND; i++) {
+      const playerIndex = i % 3;
+      await game.drawCard(playerIndex);
+    }
+    expect(game.drawCard(FIRST_FACE_OFF_ROUND % 3)).rejects.toThrow("Deal with the face off first!");
   });
 
-  it.skip("should draw a card if there's no faceoff", () => {
-    expect(true).toBe(false);
-  });
-
-  it.skip("should handle players in order", () => {
-    expect(true).toBe(false);
+  it("should give the claimed card to the winner", async () => {
+    const game = await createThreePlayerGame();
+    expect(game.isActive).toBe(true);
+    for (let i = 0; i < FIRST_FACE_OFF_ROUND - 1; i++) {
+      const playerIndex = i % 3;
+      await game.drawCard(playerIndex);
+    }
+    const { faceOff, activeCards } = await game.drawCard((FIRST_FACE_OFF_ROUND - 1) % 3);
+    expect(faceOff).toEqual([0, 1]);
+    expect(game.handleFaceOff(2)).rejects.toThrow("You don't have a face off with anyone!");
+    await game.handleFaceOff(1);
+    const claimedCards = game.players[1].ClaimedCard;
+    expect(claimedCards).toHaveLength(1);
+    const playersWithClaimedCards = game.players.filter(({ ClaimedCard }) => ClaimedCard.length > 0);
+    expect(playersWithClaimedCards).toHaveLength(1);
   });
 });

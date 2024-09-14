@@ -10,3 +10,5 @@ export const getGameId = () =>
       ),
     )
     .join("");
+
+export const getDeckSeed = () => Math.floor(Math.random() * 10000);

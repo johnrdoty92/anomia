@@ -1,5 +1,5 @@
 import { Card, Player, Prisma, PrismaClient } from "@prisma/client";
-import { getGameId } from "../util/randomId";
+import { getDeckSeed, getGameId } from "../util/random";
 import { shuffle } from "../util/shuffle";
 import { findFaceOff } from "../util/findFaceOff";
 
@@ -13,7 +13,7 @@ export class Game {
   static async createGame({ adminName, db, deckId = "default" }: GameCreateArgs) {
     const gameId = getGameId();
     const cards = await db.card.findMany({ where: { deckId } });
-    const seed = Math.floor(Math.random() * 10000);
+    const seed = getDeckSeed();
     const deck = shuffle({ items: cards, seed });
     const { players, currentCardIndex, id } = await db.game.create({
       data: {
@@ -51,7 +51,7 @@ export class Game {
 
   constructor(
     public id: string,
-    private players: Prisma.PlayerGetPayload<{ include: { ClaimedCard: true } }>[],
+    public players: Prisma.PlayerGetPayload<{ include: { ClaimedCard: true } }>[],
     public deck: Card[],
     public currentCardIndex: number,
     private db: PrismaClient,
@@ -60,7 +60,7 @@ export class Game {
   async addPlayer({ name }: { name: string }) {
     if (this.isActive) throw new Error("Cannot join game because it already started.");
     const player = await this.db.player.create({
-      data: { index: this.players.length + 1, name, gameId: this.id },
+      data: { index: this.players.length, name, gameId: this.id },
       include: { ClaimedCard: true },
     });
     this.players.push(player);
@@ -93,9 +93,44 @@ export class Game {
     return this.#turnStatus;
   }
 
-  async handleFaceOff() {}
+  async handleFaceOff(winnerIndex: number) {
+    const { faceOff, activeCards } = this.#turnStatus;
+    if (!faceOff) throw new Error("There is no face off!");
+    if (!faceOff.find((index) => index === winnerIndex)) throw new Error("You don't have a face off with anyone!");
+    const loserIndex = faceOff.filter((index) => index !== winnerIndex)[0];
+    const { card } = activeCards.find(({ player }) => player.index === loserIndex)!;
+    const winner = activeCards.find(({ player }) => player.index === winnerIndex)!.player;
+    const claimedCard = await this.db.claimedCard.create({
+      data: { cardIndex: card!.index, playerId: winner.id },
+    });
+    this.players.find(({ index }) => index === winner.index)!.ClaimedCard.push(claimedCard);
+    return this.#turnStatus;
+  }
 
-  get #turnStatus(): { faceOff: [number, number] | null; activeCards: { player: Player; card: Card | null }[] } {
+  async reset() {
+    const cards = await this.db.card.findMany({ where: { deckId: this.deck[0].deckId } });
+    const seed = getDeckSeed();
+    const deck = shuffle({ items: cards, seed });
+    const updatedGame = await this.db.game.update({
+      data: { currentCardIndex: 0, deckShuffleSeed: seed },
+      where: { id: this.id },
+      include: { players: true },
+    });
+    this.currentCardIndex = updatedGame.currentCardIndex;
+    this.deck = deck;
+    return updatedGame;
+  }
+
+  async end() {
+    const results = this.#turnStatus;
+    const deltedGame = await this.db.game.delete({ where: { id: this.id } });
+    return { results, deltedGame };
+  }
+
+  get #turnStatus(): {
+    faceOff: [number, number] | null;
+    activeCards: { player: Player; card: (Card & { index: number }) | null }[];
+  } {
     const claimedCards = new Set(
       this.players.map(({ ClaimedCard }) => ClaimedCard.map(({ cardIndex }) => cardIndex)).flat(),
     );
@@ -104,7 +139,8 @@ export class Game {
       const offset = currentPlayerIndex - player.index;
       let playerCardIndex = this.currentCardIndex - currentPlayerIndex + offset;
       while (playerCardIndex >= 0) {
-        if (!claimedCards.has(playerCardIndex)) return { player, card: this.deck[playerCardIndex] };
+        if (!claimedCards.has(playerCardIndex))
+          return { player, card: { ...this.deck[playerCardIndex], index: playerCardIndex } };
         playerCardIndex -= this.players.length;
       }
       return { player, card: null };
@@ -112,7 +148,6 @@ export class Game {
     const faceOff = findFaceOff(activeCards)?.map(({ player }) => player.index) as [number, number] | null;
     return { faceOff, activeCards };
   }
-  async reset() {}
 
   get isActive() {
     return this.currentCardIndex > -1;
