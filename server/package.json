@@ -22,12 +22,14 @@
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
-    "anomia-shared": "file:../shared"
+    "anomia-shared": "file:../shared",
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
     "prettier": "^3.3.2",
     "prisma": "^5.19.1",
+    "socket.io-client": "^4.7.5",
     "tsx": "^4.15.5",
     "typescript": "^5.5.4"
   }

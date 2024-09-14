@@ -3,9 +3,10 @@ ARG DATABASE_URL=${DATABASE_URL}
 RUN apk update && apk upgrade
 RUN apk add --no-cache sqlite
 WORKDIR /app
-COPY package*.json ./
+COPY server/package*.json ./
 RUN npm install
-COPY . .
+COPY server .
+COPY shared /app/shared
 RUN npx prisma migrate dev --name init
 RUN npx prisma db seed
 RUN chown -R node /app

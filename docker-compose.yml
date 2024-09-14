@@ -1,12 +1,15 @@
 services:
   server:
+    environment:
+      - PORT=${PORT}
     build:
-      context: ./server
+      context: .
       target: dev
+      dockerfile: Dockerfile.server
       args:
         - DATABASE_URL=${DATABASE_URL}
     ports:
-      - 3000:3000
+      - 3000:${PORT}
       - 9229:9229
     volumes:
       - ./server/src:/app/src
