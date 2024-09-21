@@ -1,13 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { Game } from "../controllers/Game";
 import { testDbClient } from "./setup";
 
-const SEED = 1000;
 const FIRST_FACE_OFF_ROUND = 4;
-
-const mocks = vi.hoisted(() => ({ getGameId: vi.fn(() => "ABCDEF"), getDeckSeed: vi.fn(() => SEED) }));
-
-vi.mock("../util/random", () => ({ ...mocks }));
 
 const createThreePlayerGame = async () => {
   const game = await Game.createGame({
@@ -22,10 +17,6 @@ const createThreePlayerGame = async () => {
 };
 
 describe("Game Class Tests", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("should create a game with one player", async () => {
     const game = await Game.createGame({
       adminName: "admin",
