@@ -1,19 +1,27 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 import { createServer } from "node:http";
 import { type AddressInfo } from "node:net";
-import { io as clientIo, Socket as ClientSocket } from "socket.io-client";
+import { io as clientIo, Socket } from "socket.io-client";
 import { Server } from "socket.io";
 import { SEED, testDbClient } from "./dbMock";
 import { auth } from "../middleware/auth";
 import { Game } from "../controllers/Game";
 import { IoSever } from "../sever";
 import { Connection } from "../controllers/Connection";
-import { ClientToServerEvents, Player, ServerToClientEvents } from "anomia-shared";
+import {
+  ClientToServerEvents,
+  GamePayload,
+  GameStatePayload,
+  PlayerPayload,
+  ServerToClientEvents,
+} from "anomia-shared";
 
 type SocketApp = {
   server: IoSever;
   connectionUrl: string;
 };
+
+type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 const createSocketApp = () => {
   return new Promise<SocketApp>((resolve) => {
@@ -72,10 +80,10 @@ describe("socket server", () => {
       const connection = new Connection(testDbClient, socket, server);
       connection.handleCreateGame();
     });
-    const clientSocket: ClientSocket<ServerToClientEvents, ClientToServerEvents> = clientIo(app.connectionUrl);
-    const player = await new Promise<Player>((resolve) => {
+    const clientSocket: ClientSocket = clientIo(app.connectionUrl);
+    const player = await new Promise<PlayerPayload>((resolve, reject) => {
       clientSocket.emit("createGame", { adminName: "Alice", deckId: "default" }, (player) => {
-        resolve(player);
+        player.success ? resolve(player.data) : reject(player);
       });
     });
     const dbPlayer = await testDbClient.player.findUnique({ where: { id: player.id } });
@@ -93,13 +101,49 @@ describe("socket server", () => {
       const connection = new Connection(testDbClient, socket, server);
       connection.handleJoinGame();
     });
-    const clientSocket: ClientSocket<ServerToClientEvents, ClientToServerEvents> = clientIo(app.connectionUrl);
-    return await new Promise<void>((resolve) => {
-      clientSocket.emit("joinGame", { name: "Bob", gameId: game.id }, (joinedGame) => {
-        expect(joinedGame.player.name).toBe("Bob");
-        expect(testDbClient.player.findUnique({ where: { id: joinedGame.player.id } })).resolves.toBeDefined();
-        resolve();
+    const clientSocket: ClientSocket = clientIo(app.connectionUrl);
+    const joinedGame = await new Promise<{ game: GamePayload; player: PlayerPayload }>((resolve, reject) => {
+      clientSocket.emit("joinGame", { name: "Bob", gameId: game.id }, (response) => {
+        response.success ? resolve(response.data) : reject(response.message);
       });
     });
+    expect(joinedGame?.player.name).toBe("Bob");
+    expect(testDbClient.player.findUnique({ where: { id: joinedGame?.player.id } })).resolves.toBeDefined();
+  });
+
+  it<{ app: SocketApp }>("should handle taking a turn", async ({ app }) => {
+    const game = await Game.createGame({
+      adminName: "Alice",
+      db: testDbClient,
+      deckId: "default",
+    });
+    const { server } = app;
+    server.use(auth(testDbClient));
+    server.on("connection", (socket) => {
+      const connection = new Connection(testDbClient, socket, server);
+      connection.handleCreateGame();
+      connection.handleStartGame();
+      connection.handleTakeTurn();
+    });
+    const clientSocket: ClientSocket = clientIo(app.connectionUrl, {
+      autoConnect: false,
+    });
+    clientSocket.auth = { playerId: game.players[0].id };
+    clientSocket.connect();
+    const result: { message?: string } = await new Promise((resolve) => {
+      clientSocket.emit("startGame", (response) => {
+        resolve(response);
+      });
+    });
+    expect(result.message).toBe("Must have at least three players to start!");
+    await game.addPlayer({ name: "Bob" });
+    await game.addPlayer({ name: "Charlie" });
+    const startedGame = await new Promise<GameStatePayload | undefined>((resolve) => {
+      clientSocket.emit("startGame", (response) => {
+        resolve(response.data);
+      });
+    });
+    expect(startedGame?.activeCards).toBeDefined();
+    expect(startedGame?.faceOff).toBe(null);
   });
 });

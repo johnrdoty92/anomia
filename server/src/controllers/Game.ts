@@ -76,7 +76,7 @@ export class Game {
       include: { players: true },
     });
     this.currentCardIndex = updatedGame.currentCardIndex;
-    return updatedGame;
+    return this.#turnStatus;
   }
 
   async drawCard(playerIndex: number) {
@@ -145,7 +145,7 @@ export class Game {
       }
       return { player, card: null };
     });
-    const faceOff = findFaceOff(activeCards)?.map(({ player }) => player.index) as [number, number] | null;
+    const faceOff = (findFaceOff(activeCards)?.map(({ player }) => player.index) as [number, number]) ?? null;
     return { faceOff, activeCards };
   }
 

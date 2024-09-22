@@ -62,7 +62,7 @@ describe("Game Class Tests", () => {
     const game = await createThreePlayerGame();
     expect(game.isActive).toBe(true);
     const firstRoundResults = await game.drawCard(0);
-    expect(firstRoundResults.faceOff).toBe(undefined);
+    expect(firstRoundResults.faceOff).toBe(null);
     for (let i = 1; i < FIRST_FACE_OFF_ROUND; i++) {
       const playerIndex = i % 3;
       await game.drawCard(playerIndex);
