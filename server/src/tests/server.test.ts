@@ -1,14 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll } from "vitest";
 import { createServer } from "node:http";
 import { type AddressInfo } from "node:net";
-import { io as clientIo } from "socket.io-client";
+import { io as clientIo, Socket as ClientSocket } from "socket.io-client";
 import { Server } from "socket.io";
 import { testDbClient } from "./setup";
 import { auth } from "../middleware/auth";
 import { Game } from "../controllers/Game";
+import { IoSever } from "../sever";
+import { Connection } from "../controllers/Connection";
+import { ClientToServerEvents, Player, ServerToClientEvents } from "anomia-shared";
 
 type SocketApp = {
-  server: Server;
+  server: IoSever;
   connectionUrl: string;
 };
 
@@ -54,5 +57,21 @@ describe("socket server", () => {
       clientSocket.auth = { playerId: id };
       clientSocket.connect();
     });
+  });
+
+  it<{ app: SocketApp }>("should handle request to create a game", async ({ app }) => {
+    const { server } = app;
+    server.on("connection", (socket) => {
+      const connection = new Connection(testDbClient, socket, server);
+      connection.handleCreateGame();
+    });
+    const clientSocket: ClientSocket<ServerToClientEvents, ClientToServerEvents> = clientIo(app.connectionUrl);
+    const player = await new Promise<Player>((resolve) => {
+      clientSocket.emit("createGame", { adminName: "Alice", deckId: "default" }, (player) => {
+        resolve(player);
+      });
+    });
+    const dbPlayer = await testDbClient.player.findUnique({ where: { id: player.id } });
+    expect(dbPlayer).toBeDefined();
   });
 });

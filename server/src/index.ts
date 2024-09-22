@@ -1,10 +1,13 @@
-import { ClientToServerEvents, ServerToClientEvents, SocketData } from "anomia-shared";
-import { Server } from "socket.io";
+import { Connection } from "./controllers/Connection";
+import { dbClient } from "./db";
+import { auth } from "./middleware/auth";
+import { io } from "./sever";
 
-const io = new Server<ClientToServerEvents, ServerToClientEvents, {}, SocketData>();
+io.use(auth(dbClient));
 
 io.on("connection", (socket) => {
-  // TODO: create functions for each handler
+  const connection = new Connection(dbClient, socket, io);
+  connection.setUpListeners();
 });
 
 io.listen(parseInt(process.env.PORT));
