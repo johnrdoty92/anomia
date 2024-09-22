@@ -24,8 +24,8 @@ export type GameStatePayload = {
       shape2: number | null;
       deckId: string;
       topic: string;
-    }
-  }
+    } | null
+  }[]
 }
 
 export type GamePayload = {
@@ -44,16 +44,16 @@ export type ServerToClientEvents = {
 export type ClientToServerEvents = {
   createGame: ({ adminName, deckId }: { adminName: string; deckId: DeckId }, response: Response<PlayerPayload>) => void;
   joinGame: ({ name, gameId }: { name: string; gameId: string }, response: Response<{game: GamePayload, player: PlayerPayload}>) => void;
-  startGame: (gameId: string, response: Response<GameStatePayload>) => void
-  takeTurn: ({ playerIndex, gameId }: { playerIndex: number; gameId: string }, response: Response<GameStatePayload>) => void;
+  startGame: (response: Response<GameStatePayload>) => void
+  takeTurn: (response: Response<GameStatePayload>) => void;
   claimCard: ({ playerIndex }: { playerIndex: number }, response: Response<GameStatePayload>) => void;
   restartGame: ({ gameId }: { gameId: string }, response: Response<GamePayload>) => void;
   endGame: ({ gameId }: { gameId: string }, reponse: Response<GameStatePayload>) => void;
 };
 
-export type PlayerSocketData = Partial<{
+export type PlayerSocketData = {
   id: string;
   gameId: string;
   name: string;
   index: number;
-}>;
+};
