@@ -74,4 +74,25 @@ describe("socket server", () => {
     const dbPlayer = await testDbClient.player.findUnique({ where: { id: player.id } });
     expect(dbPlayer).toBeDefined();
   });
+
+  it<{ app: SocketApp }>("should handle request to join game", async ({ app }) => {
+    const game = await Game.createGame({
+      adminName: "Alice",
+      db: testDbClient,
+      deckId: "default",
+    });
+    const { server } = app;
+    server.on("connection", (socket) => {
+      const connection = new Connection(testDbClient, socket, server);
+      connection.handleJoinGame();
+    });
+    const clientSocket: ClientSocket<ServerToClientEvents, ClientToServerEvents> = clientIo(app.connectionUrl);
+    return await new Promise<void>((resolve) => {
+      clientSocket.emit("joinGame", { name: "Bob", gameId: game.id }, (joinedGame) => {
+        expect(joinedGame.player.name).toBe("Bob");
+        expect(testDbClient.player.findUnique({ where: { id: joinedGame.player.id } })).resolves.toBeDefined();
+        resolve();
+      });
+    });
+  });
 });

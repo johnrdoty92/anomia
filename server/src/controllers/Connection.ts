@@ -12,6 +12,7 @@ export class Connection {
   ) {}
   setUpListeners() {
     this.handleCreateGame();
+    this.handleJoinGame();
   }
 
   handleCreateGame() {
@@ -25,7 +26,18 @@ export class Connection {
       cb(game.players[0]);
     });
   }
-  // handleJoinGame() {}
+  handleJoinGame() {
+    this.socket.on("joinGame", async ({ gameId, name }, cb) => {
+      // TODO: make sure they are not in active session
+      // TODO: handle errors
+      const game = await Game.loadGame({ db: this.db, gameId });
+      const player = await game.addPlayer({ name });
+      this.ioServer.to(game.id).emit("playerJoined", { name });
+      this.socket.join(game.id);
+      cb({ game: { id: game.id, players: game.players.map(({ name }) => ({ name })) }, player });
+    });
+  }
+
   // handleTakeTurn() {}
   // handleFaceOff() {}
   // handleGameEnd() {} // remember that this should delete the game, which cascades to all players
