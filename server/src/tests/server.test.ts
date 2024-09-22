@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 import { createServer } from "node:http";
 import { type AddressInfo } from "node:net";
 import { io as clientIo, Socket as ClientSocket } from "socket.io-client";
 import { Server } from "socket.io";
-import { testDbClient } from "./setup";
+import { SEED, testDbClient } from "./dbMock";
 import { auth } from "../middleware/auth";
 import { Game } from "../controllers/Game";
 import { IoSever } from "../sever";
@@ -27,16 +27,23 @@ const createSocketApp = () => {
   });
 };
 
+const GAME_ID = "GHIJKL";
+
+const mocks = vi.hoisted(() => ({ getGameId: vi.fn(() => GAME_ID), getDeckSeed: vi.fn(() => SEED) }));
+
+vi.mock("../util/random", () => ({ ...mocks }));
+
 describe("socket server", () => {
   beforeEach<{ app: SocketApp }>(async (context) => {
     const app = await createSocketApp();
     context.app = app;
   });
 
-  afterEach<{ app: SocketApp }>((context) => {
+  afterEach<{ app: SocketApp }>(async (context) => {
     const { app } = context;
     app.server.close();
     app.server.disconnectSockets();
+    await testDbClient.game.delete({ where: { id: GAME_ID } });
   });
 
   it<{ app: SocketApp }>("should check for player id on auth", async ({ app }) => {

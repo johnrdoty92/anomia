@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { Game } from "../controllers/Game";
-import { testDbClient } from "./setup";
+import { SEED, testDbClient } from "./dbMock";
+import { beforeEach } from "node:test";
 
 const FIRST_FACE_OFF_ROUND = 4;
 
@@ -16,7 +17,19 @@ const createThreePlayerGame = async () => {
   return game;
 };
 
+const GAME_ID = "ABCDEF";
+
+const mocks = vi.hoisted(() => ({ getGameId: vi.fn(() => GAME_ID), getDeckSeed: vi.fn(() => SEED) }));
+
+vi.mock("../util/random", () => ({ ...mocks }));
+
 describe("Game Class Tests", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+  afterEach(async () => {
+    await testDbClient.game.delete({ where: { id: GAME_ID } });
+  });
   it("should create a game with one player", async () => {
     const game = await Game.createGame({
       adminName: "admin",
