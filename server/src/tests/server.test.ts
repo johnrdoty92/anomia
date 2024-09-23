@@ -185,4 +185,35 @@ describe("socket server", () => {
     expect(newTurnStatus?.faceOff).toBe(null);
     expect(testDbClient.claimedCard.findMany({ where: { playerId: alicePlayerId } })).resolves.toHaveLength(1);
   });
+
+  it<{ app: SocketApp }>("should handle ending a game", async ({ app }) => {
+    const game = await Game.createGame({ adminName: "Alice", db: testDbClient, deckId: "default" });
+    const alice = game.players[0];
+    const bob = await game.addPlayer({ name: "Bob" });
+    const { server } = app;
+    server.use(auth(testDbClient));
+    server.on("connection", (socket) => {
+      const connection = new Connection(testDbClient, socket, server);
+      connection.handleGameEnd();
+    });
+
+    const BobSocket: ClientSocket = clientIo(app.connectionUrl, { autoConnect: false });
+    BobSocket.auth = { playerId: bob.id };
+    BobSocket.connect();
+    const errorMessage = await new Promise<string | undefined>((resolve) => {
+      BobSocket.emit("endGame", (response) => resolve(response.message));
+    });
+    expect(errorMessage).toBe("Only the game creator can end a game.");
+
+    const AliceSocket: ClientSocket = clientIo(app.connectionUrl, { autoConnect: false });
+    AliceSocket.auth = { playerId: alice.id };
+    AliceSocket.connect();
+    const finalGameStatus = await new Promise((resolve) => {
+      AliceSocket.emit("endGame", (response) => resolve(response.data));
+    });
+    expect(finalGameStatus).toBeDefined();
+    expect(testDbClient.game.findUniqueOrThrow({ where: { id: game.id } })).rejects.toThrow("No Game found");
+    // create game for cleanup
+    await Game.createGame({ adminName: "Alice", db: testDbClient, deckId: "default" });
+  });
 });

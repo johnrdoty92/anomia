@@ -47,8 +47,8 @@ export type ClientToServerEvents = {
   startGame: (response: Response<GameStatePayload>) => void
   takeTurn: (response: Response<GameStatePayload>) => void;
   claimCard: (response: Response<GameStatePayload>) => void;
-  restartGame: ({ gameId }: { gameId: string }, response: Response<GamePayload>) => void;
-  endGame: ({ gameId }: { gameId: string }, reponse: Response<GameStatePayload>) => void;
+  restartGame: (response: Response<GamePayload>) => void;
+  endGame: (reponse: Response<GameStatePayload>) => void;
 };
 
 export type PlayerSocketData = {

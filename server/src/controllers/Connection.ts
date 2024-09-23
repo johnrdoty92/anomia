@@ -17,27 +17,34 @@ export class Connection {
     this.handleJoinGame();
     this.handleTakeTurn();
     this.handleFaceOff();
-    // this.handleGameEnd();
+    this.handleGameEnd();
+    // this.handleGameRestart();
   }
 
   handleCreateGame() {
     this.socket.on("createGame", async (args, cb) => {
-      if (this.#isActiveGame) return cb({ success: false, message: "Cannot create new game while another is active." });
-      const deckId = DeckIds.includes(args.deckId) ? args.deckId : DeckIds[0];
-      const game = await Game.createGame({ adminName: args.adminName, db: this.db, deckId });
-      const player = game.players[0];
-      const playerPayload = { gameId: game.id, id: player.id, name: player.name, index: player.index };
-      this.socket.data = playerPayload;
-      this.socket.join(game.id);
-      this.ioServer.to(game.id).emit("playerJoined", { name: args.adminName, id: player.id });
-      cb({ success: true, data: playerPayload });
+      try {
+        this.assertInactiveGame("Cannot create new game while another is active.");
+        const deckId = DeckIds.includes(args.deckId) ? args.deckId : DeckIds[0];
+        const game = await Game.createGame({ adminName: args.adminName, db: this.db, deckId });
+        const player = game.players[0];
+        const playerPayload = { gameId: game.id, id: player.id, name: player.name, index: player.index };
+        this.socket.data = playerPayload;
+        this.socket.join(game.id);
+        this.ioServer.to(game.id).emit("playerJoined", { name: args.adminName, id: player.id });
+        cb({ success: true, data: playerPayload });
+      } catch (error) {
+        console.error(error);
+        const message = error instanceof Error ? error.message : "Something went wrong when trying to create a game";
+        cb({ success: false, message });
+      }
     });
   }
 
   handleJoinGame() {
     this.socket.on("joinGame", async (args, cb) => {
-      if (this.#isActiveGame) return cb({ success: false, message: "You have already joined a game!" });
       try {
+        this.assertInactiveGame("You have already joined a game!");
         const game = await Game.loadGame({ db: this.db, gameId: args.gameId });
         const { gameId, id, index, name } = await game.addPlayer({ name: args.name });
         const playerPayload: PlayerPayload = { gameId, id, index, name };
@@ -61,8 +68,8 @@ export class Connection {
 
   handleStartGame() {
     this.socket.on("startGame", async (cb) => {
-      if (!this.#isActiveGame) return cb({ success: false, message: "You must join a game before starting one" });
       try {
+        this.assertActiveGame();
         const game = await Game.loadGame({ db: this.db, gameId: this.socket.data.gameId });
         const turnStatus = await game.start();
         this.ioServer.to(game.id).emit("gameStatus", turnStatus);
@@ -77,8 +84,8 @@ export class Connection {
 
   handleTakeTurn() {
     this.socket.on("takeTurn", async (cb) => {
-      if (!this.#isActiveGame) return cb({ success: false, message: "Please join or create a game first" });
       try {
+        this.assertActiveGame();
         const game = await Game.loadGame({ db: this.db, gameId: this.socket.data.gameId });
         const turnStatus = await game.drawCard(this.socket.data.index);
         cb({ success: true, data: turnStatus });
@@ -92,22 +99,44 @@ export class Connection {
 
   handleFaceOff() {
     this.socket.on("claimCard", async (cb) => {
-      if (!this.#isActiveGame) return cb({ success: false, message: "Please join or create a game first" });
       try {
+        this.assertActiveGame();
         const game = await Game.loadGame({ db: this.db, gameId: this.socket.data.gameId });
         const turnStatus = await game.handleFaceOff(this.socket.data.index);
         cb({ success: true, data: turnStatus });
       } catch (error) {
         console.error(error);
-        const message = error instanceof Error ? error.message : "Something when wrong when trying handle the face off";
+        const message = error instanceof Error ? error.message : "Something went wrong when trying handle the face off";
         cb({ success: false, message });
       }
     });
   }
 
-  // handleGameEnd() {} // remember that this should delete the game, which cascades to all players. It should also clear socket data so they can join/create  a new game
+  handleGameRestart() {}
 
-  get #isActiveGame() {
-    return !!this.socket.data?.gameId;
+  handleGameEnd() {
+    this.socket.on("endGame", async (cb) => {
+      try {
+        this.assertActiveGame();
+        const game = await Game.loadGame({ db: this.db, gameId: this.socket.data.gameId });
+        const isAdmin = game.players[0].id === this.socket.data.id;
+        if (!isAdmin) throw new Error("Only the game creator can end a game.");
+        const { results } = await game.end();
+        cb({ success: true, data: results });
+        this.ioServer.to(game.id).disconnectSockets();
+      } catch (error) {
+        console.error(error);
+        const message = error instanceof Error ? error.message : "Something went wrong when trying to end the game.";
+        cb({ success: false, message });
+      }
+    });
+  }
+
+  assertActiveGame() {
+    if (!this.socket.data?.gameId) throw new Error("Please join or create a game first!");
+  }
+
+  assertInactiveGame(errorMessage: string) {
+    if (!!this.socket.data?.gameId) throw new Error(errorMessage);
   }
 }
