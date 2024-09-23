@@ -139,11 +139,13 @@ describe("socket server", () => {
     await game.addPlayer({ name: "Bob" });
     await game.addPlayer({ name: "Charlie" });
     const startedGame = await new Promise<GameStatePayload | undefined>((resolve) => {
-      clientSocket.emit("startGame", (response) => {
-        resolve(response.data);
-      });
+      clientSocket.emit("startGame", (response) => resolve(response.data));
     });
     expect(startedGame?.activeCards).toBeDefined();
     expect(startedGame?.faceOff).toBe(null);
+    const takenTurn = await new Promise<GameStatePayload | undefined>((resolve) => {
+      clientSocket.emit("takeTurn", (response) => resolve(response.data));
+    });
+    expect(takenTurn).toBeDefined();
   });
 });
