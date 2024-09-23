@@ -46,7 +46,7 @@ export type ClientToServerEvents = {
   joinGame: ({ name, gameId }: { name: string; gameId: string }, response: Response<{game: GamePayload, player: PlayerPayload}>) => void;
   startGame: (response: Response<GameStatePayload>) => void
   takeTurn: (response: Response<GameStatePayload>) => void;
-  claimCard: ({ playerIndex }: { playerIndex: number }, response: Response<GameStatePayload>) => void;
+  claimCard: (response: Response<GameStatePayload>) => void;
   restartGame: ({ gameId }: { gameId: string }, response: Response<GamePayload>) => void;
   endGame: ({ gameId }: { gameId: string }, reponse: Response<GameStatePayload>) => void;
 };

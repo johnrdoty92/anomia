@@ -16,7 +16,7 @@ export class Connection {
     this.handleStartGame();
     this.handleJoinGame();
     this.handleTakeTurn();
-    // this.handleFaceOff();
+    this.handleFaceOff();
     // this.handleGameEnd();
   }
 
@@ -90,7 +90,20 @@ export class Connection {
     });
   }
 
-  // handleFaceOff() {}
+  handleFaceOff() {
+    this.socket.on("claimCard", async (cb) => {
+      if (!this.#isActiveGame) return cb({ success: false, message: "Please join or create a game first" });
+      try {
+        const game = await Game.loadGame({ db: this.db, gameId: this.socket.data.gameId });
+        const turnStatus = await game.handleFaceOff(this.socket.data.index);
+        cb({ success: true, data: turnStatus });
+      } catch (error) {
+        console.error(error);
+        const message = error instanceof Error ? error.message : "Something when wrong when trying handle the face off";
+        cb({ success: false, message });
+      }
+    });
+  }
 
   // handleGameEnd() {} // remember that this should delete the game, which cascades to all players. It should also clear socket data so they can join/create  a new game
 

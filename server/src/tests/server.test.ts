@@ -37,6 +37,8 @@ const createSocketApp = () => {
 
 const GAME_ID = "GHIJKL";
 
+const FIRST_FACE_OFF_ROUND = 4;
+
 const mocks = vi.hoisted(() => ({ getGameId: vi.fn(() => GAME_ID), getDeckSeed: vi.fn(() => SEED) }));
 
 vi.mock("../util/random", () => ({ ...mocks }));
@@ -125,9 +127,7 @@ describe("socket server", () => {
       connection.handleStartGame();
       connection.handleTakeTurn();
     });
-    const clientSocket: ClientSocket = clientIo(app.connectionUrl, {
-      autoConnect: false,
-    });
+    const clientSocket: ClientSocket = clientIo(app.connectionUrl, { autoConnect: false });
     clientSocket.auth = { playerId: game.players[0].id };
     clientSocket.connect();
     const result: { message?: string } = await new Promise((resolve) => {
@@ -147,5 +147,42 @@ describe("socket server", () => {
       clientSocket.emit("takeTurn", (response) => resolve(response.data));
     });
     expect(takenTurn).toBeDefined();
+  });
+
+  it<{ app: SocketApp }>("should handle a face off correctly", async ({ app }) => {
+    const { server } = app;
+    server.use(auth(testDbClient));
+    server.on("connection", (socket) => {
+      const connection = new Connection(testDbClient, socket, server);
+      connection.handleFaceOff();
+    });
+    const game = await Game.createGame({ adminName: "Alice", db: testDbClient, deckId: "default" });
+    await game.addPlayer({ name: "Bob" });
+    await game.addPlayer({ name: "Charlie" });
+    await game.start();
+    for (let round = 0; round < FIRST_FACE_OFF_ROUND - 1; round++) {
+      const playerIndex = round % 3;
+      await game.drawCard(playerIndex);
+    }
+    const turnStatus = await game.drawCard((FIRST_FACE_OFF_ROUND - 1) % 3);
+    expect(turnStatus.faceOff).toEqual([0, 1]);
+
+    const CharlieSocket: ClientSocket = clientIo(app.connectionUrl, { autoConnect: false });
+    CharlieSocket.auth = { playerId: game.players[2].id };
+    CharlieSocket.connect();
+    const errorMessage = await new Promise<string | undefined>((resolve) => {
+      CharlieSocket.emit("claimCard", (response) => resolve(response.message));
+    });
+    expect(errorMessage).toBe("You don't have a face off with anyone!");
+
+    const alicePlayerId = game.players[0].id;
+    const AliceSocket: ClientSocket = clientIo(app.connectionUrl, { autoConnect: false });
+    AliceSocket.auth = { playerId: alicePlayerId };
+    AliceSocket.connect();
+    const newTurnStatus = await new Promise<GameStatePayload | undefined>((resolve) => {
+      AliceSocket.emit("claimCard", (response) => resolve(response.data));
+    });
+    expect(newTurnStatus?.faceOff).toBe(null);
+    expect(testDbClient.claimedCard.findMany({ where: { playerId: alicePlayerId } })).resolves.toHaveLength(1);
   });
 });

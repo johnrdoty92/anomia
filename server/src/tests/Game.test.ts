@@ -77,7 +77,7 @@ describe("Game Class Tests", () => {
       const playerIndex = i % 3;
       await game.drawCard(playerIndex);
     }
-    const { faceOff, activeCards } = await game.drawCard((FIRST_FACE_OFF_ROUND - 1) % 3);
+    const { faceOff } = await game.drawCard((FIRST_FACE_OFF_ROUND - 1) % 3);
     expect(faceOff).toEqual([0, 1]);
     expect(game.handleFaceOff(2)).rejects.toThrow("You don't have a face off with anyone!");
     await game.handleFaceOff(1);

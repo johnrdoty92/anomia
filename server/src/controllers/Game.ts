@@ -76,27 +76,27 @@ export class Game {
       include: { players: true },
     });
     this.currentCardIndex = updatedGame.currentCardIndex;
-    return this.#turnStatus;
+    return this.turnStatus;
   }
 
   async drawCard(playerIndex: number) {
     if (!this.isActive) throw new Error("Must start game first!");
     const isPlayerTurn = this.currentCardIndex % this.players.length === playerIndex;
     if (!isPlayerTurn) throw new Error("Not your turn!");
-    const { faceOff } = this.#turnStatus;
+    const { faceOff } = this.turnStatus;
     if (faceOff) throw new Error("Deal with the face off first!");
     const updatedGame = await this.db.game.update({
       data: { currentCardIndex: this.currentCardIndex + 1 },
       where: { id: this.id },
     });
     this.currentCardIndex = updatedGame.currentCardIndex;
-    return this.#turnStatus;
+    return this.turnStatus;
   }
 
   async handleFaceOff(winnerIndex: number) {
-    const { faceOff, activeCards } = this.#turnStatus;
+    const { faceOff, activeCards } = this.turnStatus;
     if (!faceOff) throw new Error("There is no face off!");
-    if (!faceOff.find((index) => index === winnerIndex)) throw new Error("You don't have a face off with anyone!");
+    if (faceOff.find((i) => i === winnerIndex) === undefined) throw new Error("You don't have a face off with anyone!");
     const loserIndex = faceOff.filter((index) => index !== winnerIndex)[0];
     const { card } = activeCards.find(({ player }) => player.index === loserIndex)!;
     const winner = activeCards.find(({ player }) => player.index === winnerIndex)!.player;
@@ -104,7 +104,7 @@ export class Game {
       data: { cardIndex: card!.index, playerId: winner.id },
     });
     this.players.find(({ index }) => index === winner.index)!.ClaimedCard.push(claimedCard);
-    return this.#turnStatus;
+    return this.turnStatus;
   }
 
   async reset() {
@@ -122,12 +122,12 @@ export class Game {
   }
 
   async end() {
-    const results = this.#turnStatus;
+    const results = this.turnStatus;
     const deltedGame = await this.db.game.delete({ where: { id: this.id } });
     return { results, deltedGame };
   }
 
-  get #turnStatus(): {
+  get turnStatus(): {
     faceOff: [number, number] | null;
     activeCards: { player: Player; card: (Card & { index: number }) | null }[];
   } {
